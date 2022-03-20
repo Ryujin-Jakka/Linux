@@ -1,2 +1,2 @@
 # Linux
-Some useful scripts/limks
+Some useful scripts for linux
