@@ -1,0 +1,74 @@
+# List of commands to install XRDP on KALI using GNOME DE
+# Tested on KALI
+
+# INSTALL XRDP ON GNOME to use RDP from WINDOWS
+# https://hands-on.cloud/how-to-set-up-remote-desktop-on-ubuntu-xrdp/
+
+sudo apt-get update
+
+# sudo apt-get install ubuntu-desktop -y
+
+# Install XRDP
+sudo apt install xrdp -y
+
+sudo systemctl status xrdp
+
+sudo adduser xrdp ssl-cert
+
+sudo systemctl restart xrdp
+
+# If there is an error message, then run this command: sudo apt install ufw 
+
+
+sudo ufw allow from 0.0.0.0/0 to any port 22
+sudo ufw allow from 0.0.0.0/0 to any port 3389
+
+sudo ufw enable
+sudo ufw reload
+
+sudo ufw status
+
+# Pulseaudio for XRDP configuration:
+# https://github.com/neutrinolabs/pulseaudio-module-xrdp/wiki/Build-on-other-distro
+# https://c-nergy.be/blog/?p=17175
+
+
+# Install Pre-Reqs
+sudo apt-get install libconfig-dev -y
+sudo apt-get install git libpulse-dev autoconf m4 intltool build-essential dpkg-dev libtool libsndfile-dev libcap-dev -y libjson-c-dev
+sudo apt build-dep pulseaudio -y
+
+# Download pulseaudio source in /tmp directory
+cd /tmp
+sudo apt source pulseaudio
+# Var for version - for istance 15.0
+pulsever=$(pulseaudio --version | awk '{print $2}')
+cd /tmp/pulseaudio-$pulsever*
+PulsePath=$(pwd)
+
+# Build - new way using meson and replacing configure old school approach
+sudo meson --prefix=$PulsePath build
+sudo ninja -C build install
+
+# Download xrdp sound modules
+sudo git clone https://github.com/neutrinolabs/pulseaudio-module-xrdp.git
+cd pulseaudio-module-xrdp
+
+# Check if config.h file is missing, if so, copy file
+#$PulsePath/pulseaudio-module-xrdp/config.h
+sudo cp $PulsePath/build/config.h $PulsePath/pulseaudio-module-xrdp  
+
+# Create xrdp sound modules
+sudo ./bootstrap
+sudo ./configure PULSE_DIR=$PulsePath
+sudo make
+#this will install modules in /usr/lib/pulse* directory
+sudo make install
+
+# Check if exists /var/lib/xrdp-pulseaudio-installer 
+sudo mkdir /var/lib/xrdp-pulseaudio-installer  # this is not created automatically
+sudo install -t "/var/lib/xrdp-pulseaudio-installer" -D -m 644 *.so
+
+
+# Note
+# Pulseaudio doesn't start after boot, it is necessary run the command "pulseaudio -D"
